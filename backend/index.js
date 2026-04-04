@@ -141,13 +141,13 @@ app.post('/api/tracing/track', async (req, res) => {
 app.post('/api/patients', async (req, res) => {
   try {
     const patientData = Array.isArray(req.body) ? req.body : [req.body];
-    const results = [];
 
-    console.log(`--- MediShield Hybrid Core: Analyzing ${patientData.length} records ---`);
 
-    for (const data of patientData) {
-      // 1. Perform Real-time Hybrid AI Analysis (Local First)
-      const analysis = await aiService.analyzePathogen(data);
+    console.log(`--- ⚡ MediShield LIGHTNING CORE: Parallelizing ${patientData.length} records ---`);
+
+    const results = await Promise.all(patientData.map(async (data, idx) => {
+      // 1. Perform Real-time Hybrid AI Analysis (Parallel + Load Balanced)
+      const analysis = await aiService.analyzePathogen(data, idx);
       
       const id = data.id || `P-${Date.now()}-${Math.floor(Math.random() * 1000)}`;
       const newPatient = {
@@ -160,16 +160,16 @@ app.post('/api/patients', async (req, res) => {
         lastAnalyzed: new Date().toISOString()
       };
 
-      // 2. Persist Analyzed Record
+      // 2. Persist Analyzed Record (NON-BLOCKING)
       if (useFirebase) {
-        await patientsRef.doc(id).set(newPatient);
+        patientsRef.doc(id).set(newPatient).catch(err => console.error("Firebase Sync Error:", err.message));
       } else {
         const idx = mockPatients.findIndex(p => p.id === id);
         if (idx !== -1) mockPatients[idx] = newPatient;
         else mockPatients.push(newPatient);
       }
-      results.push(newPatient);
-    }
+      return newPatient;
+    }));
 
     res.status(201).json({
       success: true,
@@ -196,14 +196,49 @@ app.get('/api/config/status', (req, res) => {
   });
 });
 
-app.get('/api/health', (req, res) => {
-  res.status(200).send('MediShield Backend is ' + (useFirebase ? 'Firebase' : 'Mock') + ' active');
+const path = require('path');
+
+// --- PRODUCTION CSP & SECURITY FIX ---
+// Relaxing CSP for the prototype so that browser doesn't block scripts/blobs on Render
+app.use((req, res, next) => {
+  res.setHeader(
+    "Content-Security-Policy",
+    "default-src * 'unsafe-inline' 'unsafe-eval' data: blob:; script-src * 'unsafe-inline' 'unsafe-eval' data: blob:; connect-src * 'unsafe-inline'; img-src * data: blob:; frame-src *; style-src * 'unsafe-inline';"
+  );
+  next();
 });
 
-const server = app.listen(PORT, () => {
-  console.log(`🚀 Server is ACTIVE on http://localhost:${PORT}`);
-  console.log(`📍 Mode: ${useFirebase ? 'FIREBASE_PERSISTENT' : 'IN_MEMORY_MOCK'}`);
-  console.log('Press Ctrl+C to stop');
+// --- SERVE FRONTEND STATIC ASSETS ---
+const frontendPath = path.join(__dirname, '../frontend/dist');
+app.use(express.static(frontendPath));
+
+// --- API ROUTES (Pehle se defined hain) ---
+
+// --- ROOT ROUTE (Status Check) ---
+app.get('/api/status', (req, res) => {
+  res.status(200).json({
+    status: "MediShield AI Core: Online",
+    version: "4.8.5.Hyper",
+    deployment: "Full-Stack-Ready"
+  });
+});
+
+// --- WILDCARD ROUTE (Fixes 404 on refresh) ---
+// Isse har unknown route frontend ki index.html pe jayega
+app.get('*', (req, res) => {
+  if (req.path.startsWith('/api')) return res.status(404).send('API Route Not Found');
+  res.sendFile(path.join(frontendPath, 'index.html'), (err) => {
+    if (err) {
+      res.status(200).json({
+        message: "Backend is Active. To see Frontend, run 'npm run build' in frontend folder.",
+        api_status: "Operational"
+      });
+    }
+  });
+});
+
+const server = app.listen(PORT, '0.0.0.0', () => {
+  console.log(`🚀 Production Server ACTIVE on PORT ${PORT}`);
 });
 
 // Handle server errors (e.g. Port already in use)
@@ -216,3 +251,4 @@ server.on('error', (err) => {
   }
   process.exit(1);
 });
+
