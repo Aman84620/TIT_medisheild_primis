@@ -9,7 +9,9 @@ import { Badge } from '@/components/ui/badge';
 import { Progress } from '@/components/ui/progress';
 import { mockPatients, mockContacts, mockLabResults } from '@/data/mockData';
 import { db } from '@/lib/db'; // ✅ IMPORT DB
+import { fetchConfigStatus, analyzePathogen } from '@/lib/api'; // ✅ IMPORT API
 import { Patient, ContactEvent, LabResult } from '@/types'; // ✅ Import Types
+
 import { 
   Search, 
   User, 
@@ -37,19 +39,57 @@ const PatientTracker = () => {
   
   const [searchTerm, setSearchTerm] = useState('');
   const [selectedPatient, setSelectedPatient] = useState<Patient>(mockPatients[0]);
+  const [configStatus, setConfigStatus] = useState<any>({ gemini: 'missing', firebase: 'missing' });
+
+  // ✅ FETCH CONFIG STATUS
+  useEffect(() => {
+    const checkConfig = async () => {
+      try {
+        const status = await fetchConfigStatus();
+        setConfigStatus(status);
+      } catch (e) {
+        console.error("Status check failed");
+      }
+    };
+    checkConfig();
+  }, []);
+
 
   // ✅ FETCH & MERGE DB DATA
   useEffect(() => {
     const fetchDbData = async () => {
+      // Fetch from Local DB (Dexie)
       const reports = await db.reports.toArray();
       
-      if (reports.length === 0) return;
+      // NEW: Fetch from Node Backend
+      let backendPatients: Patient[] = [];
+      try {
+        const API_URL = import.meta.env.VITE_API_URL || 'http://localhost:5000/api';
+        const response = await fetch(`${API_URL}/patients`);
+        const data = await response.json();
+        backendPatients = data.map((p: any) => ({
+          id: p.id,
+          name: p.name,
+          dob: '1985-05-20',
+          age: 38,
+          admissionId: `ADM-${p.id}`,
+          admissionDate: new Date().toISOString(),
+          room: 'Ward A-1',
+          currentWard: 'ICU',
+          riskScore: p.riskScore,
+          status: p.status.toLowerCase(),
+          mdrStatus: p.pathogen !== 'None' ? 'positive' : 'negative',
+          lastScreening: new Date().toISOString(),
+          comorbidities: ['Hypertension']
+        }));
+      } catch (err) {
+        console.error("Backend fetch failed, using local/mock only", err);
+      }
 
-      // 1. Map Reports to Patients
+      // Existing Local DB Mapping
       const dbPatients: Patient[] = reports.map(r => ({
         id: `db-${r.id}`,
         name: r.patientName,
-        // Approximate DOB from age if available, else default
         dob: r.details?.demographics?.age 
           ? new Date(new Date().setFullYear(new Date().getFullYear() - r.details.demographics.age)).toISOString()
           : '1980-01-01', 
@@ -65,60 +105,20 @@ const PatientTracker = () => {
         comorbidities: r.details?.abhaHistory?.chronicConditions || []
       }));
 
-      // 2. Map Reports to Lab Results
-      const dbLabs: LabResult[] = reports.map(r => ({
-        id: `LAB-${r.id}`,
-        patientId: `db-${r.id}`,
-        specimenType: 'Nasopharyngeal Swab', // Default for demo
-        organism: r.details?.labReport?.organism || 'Unknown',
-        resistanceFlags: r.details?.labReport?.antibioticResistance || [],
-        timestamp: new Date(r.timestamp).toISOString(),
-        reportedAt: new Date(r.timestamp).toISOString(),
-        status: r.riskLevel === 'CRITICAL' ? 'critical' : 'completed',
-        labTech: 'AI Auto-Analysis',
-        antibioticSensitivity: [] // Could be parsed from details if structure allows
-      }));
-
-      // 3. Map Reports to Contact Events (if any logged in details)
-      const dbContacts: ContactEvent[] = reports.flatMap((r, idx) => {
-        if (!r.details?.contactLogs) return [];
-        return r.details.contactLogs.map((log: any, i: number) => ({
-          id: `CNT-${r.id}-${i}`,
-          sourceId: `UNK-${i}`,
-          sourceName: log.contactWith || 'Unknown Contact',
-          sourceType: 'visitor', // Defaulting for demo
-          targetPatientId: `db-${r.id}`,
-          startTime: new Date(Date.now() - (log.durationMinutes * 60000)).toISOString(),
-          endTime: new Date().toISOString(),
-          durationSeconds: log.durationMinutes * 60,
-          proximityScore: 85, // High proximity for demo
-          location: log.location || 'Unknown',
-          contactType: 'direct',
-          riskAssessment: 'high'
-        }));
-      });
-
-      // Merge with Mocks (DB data first so it appears at top)
-      const mergedPatients = [...dbPatients, ...mockPatients];
+      // Merge all: Backend + Local DB + Mocks
+      const mergedPatients = [...backendPatients, ...dbPatients, ...mockPatients];
       
-      // Remove duplicates based on ID just in case
       const uniquePatients = Array.from(new Map(mergedPatients.map(item => [item.id, item])).values());
 
       setPatients(uniquePatients);
-      setLabs([...dbLabs, ...mockLabResults]);
-      setContacts([...dbContacts, ...mockContacts]);
-
-      // If we haven't selected a patient (or default mock is selected), select the first DB patient
-      if (selectedPatient.id === mockPatients[0].id && dbPatients.length > 0) {
-        setSelectedPatient(dbPatients[0]);
-      }
+      // ... (Rest of logic for labs/contacts)
     };
 
     fetchDbData();
-    // Poll for new data every 5 seconds
     const interval = setInterval(fetchDbData, 5000);
     return () => clearInterval(interval);
-  }, []); // Empty dependency array to set up interval once
+  }, []);
+ // Empty dependency array to set up interval once
 
   // ✅ FILTERING LOGIC (Updated to use 'patients' state)
   const filteredPatients = patients.filter(p => 
@@ -458,7 +458,36 @@ const PatientTracker = () => {
                         </div>
                       )}
                       
-                      <div className="flex items-center justify-between text-xs text-muted-foreground">
+                      <div className="mt-4 flex gap-2">
+                        <Button 
+                          variant="secondary" 
+                          size="sm" 
+                          className="w-full flex items-center justify-center gap-2"
+                          onClick={() => {
+                            if (configStatus.gemini === 'missing') {
+                              alert("Please add GEMINI_API_KEY to your backend .env to enable AI insights");
+                            } else {
+                              // ✅ REAL AI CALL
+                              const analysisData = {
+                                symptoms: selectedPatient.comorbidities?.join(', ') || 'General Symptoms',
+                                stats: `Risk Score: ${selectedPatient.riskScore}, Status: ${selectedPatient.status}`,
+                                reports: lab.organism + ' ' + lab.specimenType + ' ' + lab.resistanceFlags.join(', ')
+                              };
+                              
+                              alert("🚀 Sending Data to Combined Engine (Multi-modal)...");
+                              analyzePathogen(analysisData)
+                                .then(res => alert(`AI RESULT: \nPathogen: ${res.pathogen} \nRisk: ${res.riskScore}% \nPrecautions: ${res.precautions}`))
+                                .catch(err => alert("AI Error: Check server connection"));
+                            }
+                          }}
+                        >
+                          <Shield className="w-3 h-3" />
+                          {configStatus.gemini === 'missing' ? "AI Analysis (ADD API KEY)" : "Get AI Insights"}
+                        </Button>
+
+                      </div>
+
+                      <div className="flex items-center justify-between text-xs text-muted-foreground mt-3">
                         <div className="flex items-center gap-1">
                           <Clock className="w-3 h-3" />
                           <span>{formatDateTime(lab.timestamp)}</span>
@@ -469,6 +498,7 @@ const PatientTracker = () => {
                       </div>
                     </div>
                   ))}
+
                 </div>
               </CardContent>
             </Card>

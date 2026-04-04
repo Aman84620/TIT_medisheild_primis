@@ -23,38 +23,53 @@ const Login = () => {
     { role: 'Lab Tech', email: 'lab@medishield.ai', password: 'demo123', icon: Zap }
   ];
 
-  const handleLogin = (e: React.FormEvent) => {
+  const handleLogin = async (e: React.FormEvent) => {
     e.preventDefault();
     
-    const account = demoAccounts.find(acc => acc.email === email && acc.password === password);
-    
-    if (account) {
-      toast.success(`Welcome back!`, {
-        description: `Logging in as ${account.role}`,
-        icon: '👋',
-        duration: 2000
-      });
-      setTimeout(() => {
+    try {
+      const { loginUser } = await import('@/lib/api');
+      const data = await loginUser({ email, password });
+      
+      if (data.success) {
+        toast.success('Login Successful', {
+          description: `Welcome back, ${data.user.name}`
+        });
+        localStorage.setItem('user', JSON.stringify(data.user));
+        localStorage.setItem('token', data.token);
         navigate('/dashboard');
-      }, 800);
-    } else {
-      toast.error('Invalid credentials', {
-        description: 'Please use a demo account below',
-        duration: 3000
+      } else {
+        toast.error(data.message || 'Login failed');
+      }
+    } catch (err) {
+      console.error('Login error:', err);
+      toast.error('Connection Failed', {
+        description: 'Unable to reach the MediShield server. Please ensure the backend is running.'
       });
     }
   };
 
-  const quickLogin = (account: typeof demoAccounts[0]) => {
-    toast.success(`Quick Login`, {
-      description: `Accessing as ${account.role}`,
-      icon: '🚀',
-      duration: 1500
-    });
-    setTimeout(() => {
-      navigate('/dashboard');
-    }, 600);
+  const quickLogin = async (account: typeof demoAccounts[0]) => {
+    setEmail(account.email);
+    setPassword(account.password);
+    // Trigger real login
+    try {
+      const { loginUser } = await import('@/lib/api');
+      const data = await loginUser({ email: account.email, password: account.password });
+      
+      if (data.success) {
+        toast.success(`Welcome ${data.user.name}`, { description: 'Quick access activated.' });
+        localStorage.setItem('user', JSON.stringify(data.user));
+        localStorage.setItem('token', data.token);
+        navigate('/dashboard');
+      } else {
+        toast.error(data.message || 'Login failed');
+      }
+    } catch (err) {
+      console.error('Quick login error:', err);
+      toast.error('Network Error', { description: 'Please check your internet connection or server status.' });
+    }
   };
+
 
   const features = [
     {

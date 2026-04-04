@@ -51,20 +51,32 @@ const Dashboard = () => {
     seedDB(); // Ensure data exists
 
     const fetchLiveDashboard = async () => {
+      // Fetch from Local DB (Dexie)
       const allReports = await db.reports.toArray();
 
-      // --- 1. CALCULATE TOP-LEVEL STATS ---
+      // NEW: Fetch Summary Stats from Node Backend
+      let backendStats = null;
+      try {
+        const API_URL = import.meta.env.VITE_API_URL || 'http://localhost:5000/api';
+        const response = await fetch(`${API_URL}/dashboard/stats`);
+        backendStats = await response.json();
+      } catch (err) {
+        console.error("Backend stats fetch failed", err);
+      }
+
+      // --- 1. CALCULATE TOP-LEVEL STATS (Hybrid) ---
       const critical = allReports.filter(r => r.riskLevel === 'CRITICAL' || r.riskLevel === 'HIGH').length;
       const positive = allReports.filter(r => r.suspect_chance > 50).length;
       const total = allReports.length;
 
       setStats({
-        totalActiveAlerts: total,
+        totalActiveAlerts: backendStats ? backendStats.activeAlerts : total,
         criticalAlerts: critical,
-        avgDetectionTime: 2.3,
-        totalPatients: total > 0 ? total : 15,
+        avgDetectionTime: backendStats ? parseFloat(backendStats.avgDetectionTime) : 2.3,
+        totalPatients: backendStats ? backendStats.totalPatients : (total > 0 ? total : 15),
         mdrPositive: positive > 0 ? positive : 6
       });
+
 
       // --- 2. DYNAMIC WARDS (Hybrid: Config from Mock, Status from DB) ---
       const liveWards = mockWards.map(ward => {
