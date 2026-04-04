@@ -214,23 +214,26 @@ app.use(express.static(frontendPath));
 
 // --- API ROUTES (Pehle se defined hain) ---
 
-// --- ROOT ROUTE (Status Check) ---
+// --- ROOT STATUS ---
 app.get('/api/status', (req, res) => {
   res.status(200).json({
     status: "MediShield AI Core: Online",
     version: "4.8.5.Hyper",
-    deployment: "Full-Stack-Ready"
+    deployment: "Deployment-Ready"
   });
 });
 
 // --- WILDCARD ROUTE (Fixes 404 on refresh) ---
 // Isse har unknown route frontend ki index.html pe jayega
-app.get('*', (req, res) => {
-  if (req.path.startsWith('/api')) return res.status(404).send('API Route Not Found');
+app.use((req, res, next) => {
+  if (req.path.startsWith('/api')) {
+    return res.status(404).json({ error: "API Route Not Found" });
+  }
   res.sendFile(path.join(frontendPath, 'index.html'), (err) => {
     if (err) {
+      // If frontend is not built, show status
       res.status(200).json({
-        message: "Backend is Active. To see Frontend, run 'npm run build' in frontend folder.",
+        message: "Backend is Active. To see UI, run 'npm run build' in frontend folder.",
         api_status: "Operational"
       });
     }
@@ -251,4 +254,3 @@ server.on('error', (err) => {
   }
   process.exit(1);
 });
-
