@@ -55,8 +55,9 @@ if (useFirebase) {
     console.warn("⚠️ Running in MOCK MODE (In-memory storage).");
 }
 
-// --- AUTH ---
-app.post('/api/auth/login', (req, res) => {
+// --- AUTH & LEGACY COMPATIBILITY ---
+// This handles BOTH /api/auth/login (new) and /auth/login (old/current unbuilt frontend)
+const loginHandler = (req, res) => {
   const { email, password } = req.body;
   if (email === 'admin@medishield.ai' && password === 'demo123') {
     return res.json({ success: true, user: { id: 'admin-1', name: 'Admin User', role: 'admin' }, token: 'mock-jwt-token' });
@@ -66,7 +67,10 @@ app.post('/api/auth/login', (req, res) => {
   } else {
     res.status(401).json({ success: false, message: 'Invalid credentials' });
   }
-});
+};
+
+app.post('/api/auth/login', loginHandler);
+app.post('/auth/login', loginHandler); // LEGACY SUPPORT FIX
 
 // --- DASHBOARD STATS ---
 app.get('/api/dashboard/stats', async (req, res) => {
