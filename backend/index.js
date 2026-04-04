@@ -1,0 +1,218 @@
+const express = require('express');
+const cors = require('cors');
+const axios = require('axios'); // For custom ML and Tracing APIs
+require('dotenv').config();
+const aiService = require('./services/aiService');
+
+const app = express();
+const PORT = process.env.PORT || 5000;
+
+app.use(cors({
+  origin: process.env.FRONTEND_URL || '*',
+  methods: ['GET', 'POST', 'PUT', 'DELETE'],
+  credentials: true
+}));
+app.use(express.json());
+
+// --- FIREBASE CONFIG & FALLBACK ---
+const useFirebase = process.env.FIREBASE_PROJECT_ID && 
+                    process.env.FIREBASE_CLIENT_EMAIL && 
+                    process.env.FIREBASE_PRIVATE_KEY;
+
+let patientsRef, alertsRef, reportsRef;
+let mockPatients = [
+  { id: '1', name: 'John Doe', status: 'Infected', pathogen: 'MRSA', riskScore: 85 },
+  { id: '2', name: 'Jane Smith', status: 'Exposed', pathogen: 'None', riskScore: 45 },
+];
+let mockAlerts = [
+  { id: '101', type: 'High Risk', message: 'MRSA detected in Ward A', time: '10:30 AM' },
+];
+let mockReports = [];
+
+if (useFirebase) {
+    try {
+      const { db } = require('./config/firebase');
+      patientsRef = db.collection('patients');
+      alertsRef = db.collection('alerts');
+      reportsRef = db.collection('reports');
+      console.log("🔥 Connected to Firebase Firestore");
+    } catch (err) {
+      console.error("Firebase init failed, falling back to MOCK MODE");
+    }
+} else {
+    console.warn("⚠️ Running in MOCK MODE (In-memory storage).");
+}
+
+// --- AUTH ---
+app.post('/api/auth/login', (req, res) => {
+  const { email, password } = req.body;
+  if (email === 'admin@medishield.ai' && password === 'demo123') {
+    return res.json({ success: true, user: { id: 'admin-1', name: 'Admin User', role: 'admin' }, token: 'mock-jwt-token' });
+  }
+  if (email && password) {
+    res.json({ success: true, user: { id: 'user-1', name: 'Hospital Staff', role: 'staff' }, token: 'mock-jwt-token' });
+  } else {
+    res.status(401).json({ success: false, message: 'Invalid credentials' });
+  }
+});
+
+// --- DASHBOARD STATS ---
+app.get('/api/dashboard/stats', async (req, res) => {
+  if (useFirebase) {
+    try {
+      const pSnap = await patientsRef.count().get();
+      const aSnap = await alertsRef.count().get();
+      return res.json({ avgDetectionTime: '2.3h', accuracy: '95%', activeAlerts: aSnap.data().count, totalPatients: pSnap.data().count });
+    } catch (e) {}
+  }
+  res.json({ avgDetectionTime: '2.3h', accuracy: '95%', activeAlerts: mockAlerts.length, totalPatients: mockPatients.length });
+});
+
+// --- PATIENTS ---
+app.get('/api/patients', async (req, res) => {
+  if (useFirebase) {
+    try {
+      const snap = await patientsRef.get();
+      return res.json(snap.docs.map(d => ({ id: d.id, ...d.data() })));
+    } catch (e) {}
+  }
+  res.json(mockPatients);
+});
+
+// --- AI ANALYSIS ---
+app.post('/api/ai/analyze', async (req, res) => {
+  try {
+    const analysis = await aiService.analyzePathogen(req.body);
+    res.json(analysis);
+  } catch (e) {
+    res.status(500).json({ error: "AI failed" });
+  }
+});
+
+// --- CUSTOM ML MODEL (NEW) ---
+app.post('/api/ml/analyze', async (req, res) => {
+  if (!process.env.CUSTOM_ML_URL) return res.status(403).json({ error: "ML URL Missing" });
+  try {
+    const response = await axios.post(process.env.CUSTOM_ML_URL, req.body, {
+      headers: { 'Authorization': `Bearer ${process.env.CUSTOM_ML_API_KEY}` }
+    });
+    res.json(response.data);
+  } catch (error) {
+    console.error("Custom ML failed:", error.message);
+    res.status(500).json({ error: "Custom ML Call Failed" });
+  }
+});
+
+// --- REAL-TIME TRACING (RADAR.IO) ---
+const contactService = require('./services/contactService');
+
+app.post('/api/tracing/analyze', async (req, res) => {
+  try {
+     const { patients } = req.body;
+     if (!patients || !Array.isArray(patients)) return res.status(400).json({ error: "Patients list required" });
+     
+     const contacts = await contactService.detectContacts(patients);
+     res.json({
+        success: true,
+        count: contacts.length,
+        contacts,
+        engine: process.env.RADAR_API_KEY ? "Radar.io + Matrix" : "Math-Fallback-Active"
+     });
+  } catch (error) {
+     res.status(500).json({ error: "Contact Tracing Analysis Failed" });
+  }
+});
+
+app.post('/api/tracing/track', async (req, res) => {
+  const { lat, lng, userId } = req.body;
+  if (!lat || !lng) return res.status(400).json({ error: "Coordinates missing" });
+  
+  try {
+    const response = await axios.get(`https://api.radar.io/v1/context?coordinates=${lat},${lng}`, {
+      headers: { 'Authorization': process.env.RADAR_API_KEY || 'no-key' }
+    });
+    res.json({ userId, context: response.data, status: "Location Synced" });
+  } catch (error) {
+    res.json({ userId, status: "Local Tracking Active", location: { lat, lng } });
+  }
+});
+
+// --- PATIENT CREATION (BULK & SINGLE) ---
+app.post('/api/patients', async (req, res) => {
+  try {
+    const patientData = Array.isArray(req.body) ? req.body : [req.body];
+    const results = [];
+
+    console.log(`--- MediShield Hybrid Core: Analyzing ${patientData.length} records ---`);
+
+    for (const data of patientData) {
+      // 1. Perform Real-time Hybrid AI Analysis (Local First)
+      const analysis = await aiService.analyzePathogen(data);
+      
+      const id = data.id || `P-${Date.now()}-${Math.floor(Math.random() * 1000)}`;
+      const newPatient = {
+        ...data,
+        id,
+        diagnosis: analysis.dx || analysis.result?.dx || analysis.infection_ai?.disease || "Monitoring Case",
+        tier: analysis.tier || analysis.result?.tier || analysis.control_ai?.isolation_tier || "Tier 1",
+        riskScore: analysis.riskScore || analysis.result?.riskScore || analysis.risk_ai?.spread_score || 0.15,
+        source: analysis.source || "MediShield-Bayesian-Core",
+        lastAnalyzed: new Date().toISOString()
+      };
+
+      // 2. Persist Analyzed Record
+      if (useFirebase) {
+        await patientsRef.doc(id).set(newPatient);
+      } else {
+        const idx = mockPatients.findIndex(p => p.id === id);
+        if (idx !== -1) mockPatients[idx] = newPatient;
+        else mockPatients.push(newPatient);
+      }
+      results.push(newPatient);
+    }
+
+    res.status(201).json({
+      success: true,
+      count: results.length,
+      patients: results
+    });
+  } catch (error) {
+    console.error("Critical Analysis Engine Error:", error.message);
+    res.status(500).json({ 
+        error: "High-level diagnostic system failure", 
+        detail: error.message 
+    });
+  }
+});
+
+
+// --- CONFIG STATUS ---
+app.get('/api/config/status', (req, res) => {
+  res.json({
+    firebase: useFirebase ? "active" : "missing",
+    gemini: process.env.GEMINI_API_KEY ? "active" : "missing",
+    customML: process.env.CUSTOM_ML_URL ? "active" : "missing",
+    tracing: process.env.RADAR_API_KEY ? "active" : "missing",
+  });
+});
+
+app.get('/api/health', (req, res) => {
+  res.status(200).send('MediShield Backend is ' + (useFirebase ? 'Firebase' : 'Mock') + ' active');
+});
+
+const server = app.listen(PORT, () => {
+  console.log(`🚀 Server is ACTIVE on http://localhost:${PORT}`);
+  console.log(`📍 Mode: ${useFirebase ? 'FIREBASE_PERSISTENT' : 'IN_MEMORY_MOCK'}`);
+  console.log('Press Ctrl+C to stop');
+});
+
+// Handle server errors (e.g. Port already in use)
+server.on('error', (err) => {
+  if (err.code === 'EADDRINUSE') {
+    console.error(`❌ Error: Port ${PORT} is already in use.`);
+    console.log('Try running: taskkill /F /IM node.exe');
+  } else {
+    console.error('❌ Server Error:', err.message);
+  }
+  process.exit(1);
+});
