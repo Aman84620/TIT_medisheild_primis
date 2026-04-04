@@ -220,34 +220,37 @@ app.use((req, res, next) => {
   next();
 });
 
-// --- SERVE FRONTEND STATIC ASSETS ---
-const frontendPath = path.join(__dirname, '../frontend/dist');
-app.use(express.static(frontendPath));
-
-// --- API ROUTES (Pehle se defined hain) ---
+// --- API ROUTES PRIORITY ---
+// (API routes like /api/auth/login are already defined above)
 
 // --- ROOT STATUS ---
 app.get('/api/status', (req, res) => {
   res.status(200).json({
     status: "MediShield AI Core: Online",
-    version: "4.8.5.Hyper",
-    deployment: "Deployment-Ready"
+    deployment: "Production-Stable"
   });
 });
 
+// --- SERVE FRONTEND STATIC ASSETS ---
+const frontendPath = path.join(__dirname, '../frontend/dist');
+app.use(express.static(frontendPath));
+
 // --- WILDCARD ROUTE (Fixes 404 on refresh) ---
-// Isse har unknown route frontend ki index.html pe jayega
-app.use((req, res, next) => {
+app.get('*', (req, res, next) => {
+  // Agar /api se start hota hai, toh yahan mat aao, 404 do
   if (req.path.startsWith('/api')) {
     return res.status(404).json({ error: "API Route Not Found" });
   }
+  
+  // Static content phục vụ cho router của React/Vite
   res.sendFile(path.join(frontendPath, 'index.html'), (err) => {
     if (err) {
-      // If frontend is not built, show status
-      res.status(200).json({
-        message: "Backend is Active. To see UI, run 'npm run build' in frontend folder.",
-        api_status: "Operational"
-      });
+      if (!res.headersSent) {
+        res.status(200).json({
+          message: "Backend Active. To see Frontend UI, ensure 'npm run build' was run in the frontend folder.",
+          api_status: "Operational"
+        });
+      }
     }
   });
 });
