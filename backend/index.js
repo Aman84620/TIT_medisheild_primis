@@ -7,9 +7,21 @@ const aiService = require('./services/aiService');
 const app = express();
 const PORT = process.env.PORT || 5000;
 
+const allowedOrigins = [
+  'https://medisheildprimis2026.vercel.app',
+  'https://medisheildprimis2026.vercel.app/',
+  process.env.FRONTEND_URL ? process.env.FRONTEND_URL.replace(/\/$/, "") : "*"
+];
+
 app.use(cors({
-  origin: process.env.FRONTEND_URL || '*',
-  methods: ['GET', 'POST', 'PUT', 'DELETE'],
+  origin: (origin, callback) => {
+    if (!origin || allowedOrigins.includes(origin) || allowedOrigins.includes(origin + '/')) {
+      callback(null, true);
+    } else {
+      callback(new Error('Not allowed by CORS'));
+    }
+  },
+  methods: ['GET', 'POST', 'PUT', 'DELETE', 'OPTIONS'],
   credentials: true
 }));
 app.use(express.json());
