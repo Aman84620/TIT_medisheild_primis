@@ -360,7 +360,7 @@ const PatientTracker = () => {
                 <div className="flex items-center gap-3 p-3 bg-muted/50 rounded-lg">
                   <Shield className="w-5 h-5 text-primary" />
                   <div>
-                    <p className="text-xs text-muted-foreground">MDR Status</p>
+                    <p className="text-xs text-muted-foreground">Serious Pathogen Status</p>
                     <Badge className={`${getMDRStatusColor(selectedPatient.mdrStatus)} text-white mt-1`}>
                       {selectedPatient.mdrStatus?.toUpperCase()}
                     </Badge>
@@ -403,7 +403,7 @@ const PatientTracker = () => {
                   <Microscope className="w-5 h-5 text-primary" />
                   Laboratory Results
                 </CardTitle>
-                <CardDescription>MDR pathogen detection and resistance profiles</CardDescription>
+                <CardDescription>Serious pathogen detection and resistance profiles</CardDescription>
               </CardHeader>
               <CardContent>
                 <div className="space-y-3">

@@ -546,7 +546,7 @@ export const mockAlerts: Alert[] = [
     acknowledgedAt: daysAgo(1, 3),
     status: 'in_progress',
     assignedTo: 'Dr. Neha Kapoor',
-    description: 'MRSA detected in blood culture. Immediate isolation protocol initiated.',
+    description: 'Serious pathogen (MRSA) detected in blood culture. Universal isolation protocol initiated.',
     ward: 'ICU-North',
     actionsTaken: ['Patient isolated', 'Contact tracing started', 'PPE upgraded'],
     estimatedExposures: 12
@@ -561,7 +561,7 @@ export const mockAlerts: Alert[] = [
     acknowledgedAt: daysAgo(0, 21),
     status: 'in_progress',
     assignedTo: 'Dr. Neha Kapoor',
-    description: 'High-risk contact: Adjacent room exposure to MRSA-positive patient.',
+    description: 'Serious exposure: Adjacent room proximity to confirmed infection.',
     ward: 'ICU-North',
     actionsTaken: ['Screening ordered', 'Enhanced monitoring'],
     estimatedExposures: 8
@@ -574,7 +574,7 @@ export const mockAlerts: Alert[] = [
     severity: 'critical',
     createdAt: daysAgo(0, 6),
     status: 'new',
-    description: '⚠️ OUTBREAK ALERT: 3 confirmed MRSA cases in ICU-North within 72 hours. Epidemiological investigation required.',
+    description: '⚠️ UNIVERSAL ALERT: 3 confirmed serious cases in ICU-North within 72 hours. Epidemiological investigation required.',
     ward: 'ICU-North',
     estimatedExposures: 24
   },
@@ -588,7 +588,7 @@ export const mockAlerts: Alert[] = [
     acknowledgedAt: daysAgo(0, 3.5),
     status: 'in_progress',
     assignedTo: 'Dr. Vikram Mehta',
-    description: 'MRSA confirmed in surgical wound. Contact precautions mandatory.',
+    description: 'Pathogen confirmed in surgical wound. Universal precautions mandatory.',
     ward: 'ICU-North',
     actionsTaken: ['Cohort isolation', 'Staff screening'],
     estimatedExposures: 6
@@ -601,7 +601,7 @@ export const mockAlerts: Alert[] = [
     severity: 'medium',
     createdAt: daysAgo(0, 2),
     status: 'new',
-    description: '3 patients in ICU-South due for routine MDR screening (proximity to outbreak zone).',
+    description: '3 patients in ICU-South due for routine universal screening (proximity to outbreak zone).',
     ward: 'ICU-South',
     estimatedExposures: 0
   },

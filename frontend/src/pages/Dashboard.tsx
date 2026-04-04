@@ -39,7 +39,7 @@ const Dashboard = () => {
     criticalAlerts: 0,
     avgDetectionTime: 2.3,
     totalPatients: 15,
-    mdrPositive: 6
+    mdrPositive: 6 // Keep variable for logic, but UI will show "Serious Cases"
   });
 
   const [chartData, setChartData] = useState(dailyExposureData);
@@ -174,7 +174,7 @@ const Dashboard = () => {
           <h1 className="text-3xl font-bold bg-gradient-to-r from-primary to-primary/60 bg-clip-text text-transparent">
             Surveillance Dashboard
           </h1>
-          <p className="text-muted-foreground mt-1">Real-time MDR pathogen monitoring and contact tracing intelligence</p>
+          <p className="text-muted-foreground mt-1">Real-time pathogen monitoring and universal transmission intelligence</p>
         </div>
         <div className="flex items-center gap-2">
           <Badge variant="outline" className="border-green-500 text-green-600 px-3 py-1">
@@ -200,7 +200,7 @@ const Dashboard = () => {
             </div>
             <div>
               <p className="text-3xl font-bold text-red-900 dark:text-red-100">{stats.criticalAlerts}</p>
-              <p className="text-sm text-red-700 dark:text-red-300 font-medium mb-2">Active MDR Cases</p>
+              <p className="text-sm text-red-700 dark:text-red-300 font-medium mb-2">Active Serious Cases</p>
               <Badge variant="outline" className="border-red-300 text-red-600 text-xs">
                 Live DB Count
               </Badge>
@@ -335,7 +335,7 @@ const Dashboard = () => {
               <Droplets className="w-5 h-5 text-primary" />
               Pathogen Distribution
             </CardTitle>
-            <CardDescription>Current MDR organism prevalence</CardDescription>
+            <CardDescription>Current organism prevalence and universal transmission risk</CardDescription>
           </CardHeader>
           <CardContent>
             <ResponsiveContainer width="100%" height={280}>
@@ -439,7 +439,7 @@ const Dashboard = () => {
             <div className="flex items-center justify-between p-4 bg-gradient-to-r from-blue-50 to-blue-100 dark:from-blue-950/20 dark:to-blue-900/20 rounded-lg border border-blue-200 dark:border-blue-800">
               <div>
                 <p className="text-2xl font-bold text-blue-900 dark:text-blue-100">{stats.mdrPositive}/{stats.totalPatients}</p>
-                <p className="text-sm text-blue-700 dark:text-blue-300">MDR Positive Rate</p>
+                <p className="text-sm text-blue-700 dark:text-blue-300">Serious Positive Rate</p>
               </div>
               <div className="text-right">
                 <p className="text-lg font-semibold text-blue-600">{stats.totalPatients > 0 ? Math.round((stats.mdrPositive / stats.totalPatients) * 100) : 0}%</p>
@@ -470,7 +470,7 @@ const Dashboard = () => {
       <Card className="hover:shadow-lg transition-shadow">
         <CardHeader>
           <CardTitle>Hospital Risk Heatmap</CardTitle>
-          <CardDescription>Visual representation of MDR risk distribution across wards</CardDescription>
+          <CardDescription>Visual representation of serious pathogen risk distribution across wards</CardDescription>
         </CardHeader>
         <CardContent>
           <div className="grid grid-cols-2 lg:grid-cols-5 gap-4">

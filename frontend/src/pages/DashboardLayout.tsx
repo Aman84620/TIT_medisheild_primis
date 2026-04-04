@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { Outlet, Link, useLocation, useNavigate } from 'react-router-dom';
 import { 
   LayoutDashboard, 
@@ -30,7 +30,7 @@ import {
 
 const DashboardLayout = () => {
   const [sidebarOpen, setSidebarOpen] = useState(false);
-  const [darkMode, setDarkMode] = useState(false);
+  const [darkMode, setDarkMode] = useState(true);
   const location = useLocation();
   const navigate = useNavigate();
 
@@ -70,7 +70,7 @@ const DashboardLayout = () => {
                 <div className="absolute -top-1 -right-1 w-4 h-4 bg-green-500 rounded-full border-2 border-white animate-pulse-glow"></div>
               </div>
               <div>
-                <h1 className="text-xl font-bold gradient-text">MDR Shield</h1>
+                <h1 className="text-xl font-bold gradient-text">MediShield AI</h1>
                 <p className="text-xs text-muted-foreground">Infection Control</p>
               </div>
             </div>
@@ -149,7 +149,7 @@ const DashboardLayout = () => {
                 <div className="w-10 h-10 bg-gradient-to-br from-blue-500 to-purple-600 rounded-xl flex items-center justify-center">
                   <Activity className="w-6 h-6 text-white" />
                 </div>
-                <h1 className="text-xl font-bold gradient-text">MDR Shield</h1>
+                <h1 className="text-xl font-bold gradient-text">MediShield AI</h1>
               </div>
               <Button variant="ghost" size="icon" onClick={() => setSidebarOpen(false)}>
                 <X className="h-6 w-6" />

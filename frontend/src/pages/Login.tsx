@@ -1,7 +1,7 @@
 // ✅ PREMIUM LOGIN PAGE
 // Professional hospital system authentication with demo accounts
 
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -75,7 +75,7 @@ const Login = () => {
     {
       icon: Activity,
       title: 'Real-time Pathogen Detection',
-      description: 'Advanced NLP identifies MDR organisms from lab results instantly',
+      description: 'Advanced NLP identifies serious pathogens from lab results instantly',
       color: 'text-red-500'
     },
     {
@@ -112,7 +112,7 @@ const Login = () => {
               <h1 className="text-4xl font-bold bg-gradient-to-r from-primary to-blue-600 bg-clip-text text-transparent">
                 MediShield AI
               </h1>
-              <p className="text-muted-foreground font-medium">Digital Contact Tracing & MDR Surveillance</p>
+              <p className="text-muted-foreground font-medium">Universal Transmitted Disease Intelligence</p>
             </div>
           </div>
           
@@ -160,7 +160,7 @@ const Login = () => {
               </div>
             </div>
             <CardTitle className="text-2xl text-center">Welcome Back</CardTitle>
-            <CardDescription className="text-center">Sign in to access MDR surveillance system</CardDescription>
+            <CardDescription className="text-center">Sign in to access universal surveillance system</CardDescription>
           </CardHeader>
           <CardContent>
             <form onSubmit={handleLogin} className="space-y-4">

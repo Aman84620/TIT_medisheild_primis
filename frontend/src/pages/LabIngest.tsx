@@ -1,5 +1,5 @@
 // ✅ PREMIUM LAB INTEGRATION INTERFACE
-// Hospital-grade lab data ingestion with AI-powered MDR detection and ABHA Integration
+// Hospital-grade lab data ingestion with AI-powered Serious Pathogen detection and ABHA Integration
 
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
@@ -155,7 +155,7 @@ const LabIngest = () => {
   const [isSendingEmail, setIsSendingEmail] = useState(false);
   const fileInputRef = useRef<HTMLInputElement>(null);
 
-  const mdrPathogens = [
+  const seriousPathogens = [
     { name: 'MRSA', fullName: 'Methicillin-resistant Staphylococcus aureus', color: 'from-red-500 to-red-600', icon: '🦠', prevalence: '45%' },
     { name: 'VRE', fullName: 'Vancomycin-resistant Enterococcus', color: 'from-orange-500 to-orange-600', icon: '🔴', prevalence: '28%' },
     { name: 'ESBL', fullName: 'Extended-spectrum beta-lactamase', color: 'from-yellow-500 to-yellow-600', icon: '🟡', prevalence: '18%' },
@@ -200,6 +200,12 @@ const LabIngest = () => {
     const seed = (input.demographics.name.length + input.patientId.length) % 10;
     // Expanded range for more realistic demo (20% to 95%)
     const variedRisk = 0.25 + (seed * 0.06) + (Math.random() * 0.1);
+
+    // Inject relative coordinates for Contact Tracing (Hospital simulation)
+    const mockLocation = {
+      lat: 28.6139 + (seed * 0.0001), 
+      lng: 77.2090 + (0.00015 * Math.random())
+    };
 
     if (!match) {
       const plans = [
@@ -279,7 +285,7 @@ const LabIngest = () => {
 
     // 1. Construct a nicely formatted message body
     const formattedMessage = `
-🚨 CRITICAL LAB ALERT - MDR PATHOGEN DETECTED 🚨
+🚨 CRITICAL LAB ALERT - SERIOUS PATHOGEN DETECTED 🚨
 ================================================
 
 PATIENT DETAILS
@@ -300,7 +306,7 @@ LAB ANALYSIS
 Organism: ${result.labReport.organism}
 Specimen: ${result.specimenDetails.sampleType}
 Resistance Detected: ${result.labReport.antibioticResistance.join(', ')}
-MDR Status: ${result.labReport.isMDR ? 'POSITIVE' : 'NEGATIVE'}
+MDR Status: ${result.labReport.isMDR ? 'POSITIVE' : 'NEGATIVE'} (Serious Transmitted Disease)
 Lab Request ID: ${result.specimenDetails.labRequestId}
 
 AI RISK ASSESSMENT
@@ -326,7 +332,7 @@ Automated Alert by MediShield AI
       to_email: 'ajaygurjar78692@gmail.com',
       to_name: 'Dr. Ajay Kumar',
       from_name: 'MediShield AI System',
-      subject: `⚠️ URGENT: High Risk MDR Alert - ${result.demographics.name} (${result.patientId})`,
+      subject: `⚠️ URGENT: High Risk Serious Alert - ${result.demographics.name} (${result.patientId})`,
       message: formattedMessage
     };
 
@@ -386,7 +392,8 @@ Automated Alert by MediShield AI
         status: r.aiAssessment.riskLevel === 'CRITICAL' ? 'Infected' : 'Monitoring',
         pathogen: r.labReport.organism,
         riskScore: Math.round(r.aiAssessment.riskScore * 100),
-        ward: r.hospitalContext.ward
+        ward: r.hospitalContext.ward,
+        location: r.location
       }));
 
       const data = await addPatients(backendCompatibleRecords);
@@ -709,7 +716,7 @@ Automated Alert by MediShield AI
         <Card>
           <CardHeader>
             <CardTitle>System Capabilities</CardTitle>
-            <CardDescription>Advanced features powering intelligent MDR detection</CardDescription>
+            <CardDescription>Advanced features powering intelligent serious pathogen detection</CardDescription>
           </CardHeader>
           <CardContent>
             <div className="grid md:grid-cols-2 lg:grid-cols-4 gap-4">
@@ -726,12 +733,12 @@ Automated Alert by MediShield AI
 
         <Card>
           <CardHeader>
-            <CardTitle className="flex items-center gap-2"><Microscope className="w-5 h-5 text-primary" /> MDR Pathogen Detection Library</CardTitle>
-            <CardDescription>Automatically detects these multidrug-resistant organisms</CardDescription>
+            <CardTitle className="flex items-center gap-2"><Microscope className="w-5 h-5 text-primary" /> Serious Pathogen Detection Library</CardTitle>
+            <CardDescription>Automatically detects these universal transmitted organisms</CardDescription>
           </CardHeader>
           <CardContent>
             <div className="grid md:grid-cols-2 lg:grid-cols-4 gap-4">
-              {mdrPathogens.map((pathogen, idx) => (
+              {seriousPathogens.map((pathogen, idx) => (
                 <div key={idx} className={`p-6 rounded-xl bg-gradient-to-br ${pathogen.color} text-white shadow-lg hover:shadow-2xl transition-all duration-300 hover:scale-105 cursor-pointer group`}>
                   <div className="flex items-start justify-between mb-3">
                     <div className="text-4xl group-hover:scale-110 transition-transform">{pathogen.icon}</div>
